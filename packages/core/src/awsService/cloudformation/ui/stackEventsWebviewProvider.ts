@@ -227,8 +227,17 @@ export class StackEventsWebviewProvider implements WebviewViewProvider, Disposab
 
         for (const [operationId, operationEvents] of operationGroups.entries()) {
             const groupId = `op-${operationId}`
+
+            // Surface hook failure info on the parent row
+            const hookEvent = operationEvents.find((e) => e.HookType)
+            const parentEvent = { ...operationEvents[0] }
+            if (hookEvent && !parentEvent.HookType) {
+                parentEvent.HookType = hookEvent.HookType
+                parentEvent.HookStatus = hookEvent.HookStatus
+            }
+
             grouped.push({
-                ...operationEvents[0],
+                ...parentEvent,
                 groupId,
                 isParent: true,
             })
@@ -417,6 +426,10 @@ export class StackEventsWebviewProvider implements WebviewViewProvider, Disposab
                         .chevron.expanded {
                             transform: rotate(90deg);
                         }
+                        .hook-name {
+                            cursor: context-menu;
+                            text-decoration: underline dotted;
+                        }
                         .status-complete {
                             color: #3fb950;
                         }
@@ -486,6 +499,14 @@ ${events.map((e) => this.renderEventRow(e, hasHooks)).join('')}
                         function toggle(id) {
                             vscode.postMessage({ command: 'toggle', groupId: id })
                         }
+                        function copyHookName(e, name) {
+                            e.preventDefault()
+                            navigator.clipboard.writeText(name)
+                            const el = e.target
+                            const orig = el.textContent
+                            el.textContent = 'Copied!'
+                            setTimeout(() => { el.textContent = orig }, 1000)
+                        }
                     </script>
                 </body>
             </html>`
@@ -493,7 +514,7 @@ ${events.map((e) => this.renderEventRow(e, hasHooks)).join('')}
 
     private renderEventRow(event: GroupedEvent, hasHooks: boolean): string {
         const hookCell = hasHooks
-            ? `<td>${event.HookType ? `${event.HookType} (${event.HookStatus ?? '-'})` : '-'}</td>`
+            ? `<td>${event.HookType ? `<span class="hook-name" oncontextmenu="copyHookName(event, '${event.HookType}')">${event.HookType}</span> (${event.HookStatus ?? '-'})` : '-'}</td>`
             : ''
 
         if (event.isParent) {

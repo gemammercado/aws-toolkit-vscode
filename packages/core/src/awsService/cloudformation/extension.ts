@@ -48,6 +48,7 @@ import {
 } from './commands/cfnCommands'
 import { openStackTemplateCommand } from './commands/openStackTemplate'
 import { selectRegionCommand } from './commands/regionCommands'
+import { refreshHooksCommand, loadMoreHooksCommand, configureHookCommand } from './commands/hookCommands'
 import { AwsCredentialsService, encryptionKey } from './auth/credentials'
 import { ExtensionId, ExtensionName, CloudFormationTelemetrySettings } from './extensionConfig'
 import { VSCODE_EXTENSION_ID_CONSTANTS } from '../../shared/extensionIds'
@@ -79,6 +80,7 @@ import { LspServerProvider } from './lsp-server/lspServerProvider'
 import { getLogger } from '../../shared/logger/logger'
 import { ChangeSetsManager } from './stacks/changeSetsManager'
 import { CfnEnvironmentManager } from './cfn-init/cfnEnvironmentManager'
+import { HooksManager } from './hooks/hooksManager'
 import { CfnEnvironmentSelector } from './ui/cfnEnvironmentSelector'
 import { CfnInitUiInterface } from './cfn-init/cfnInitUiInterface'
 import { CfnInitCliCaller } from './cfn-init/cfnInitCliCaller'
@@ -181,6 +183,7 @@ async function startClient(context: ExtensionContext) {
     client = new LanguageClient(ExtensionId, ExtensionName, serverOptions, clientOptions)
 
     const stacksManager = new StacksManager(client)
+    const hooksManager = new HooksManager(client)
 
     await client.start()
 
@@ -208,7 +211,8 @@ async function startClient(context: ExtensionContext) {
         changeSetManager,
         documentManager,
         globals.regionProvider,
-        environmentManager
+        environmentManager,
+        hooksManager
     )
 
     resourceSelector.setRefreshCallback(() => cfnExplorer.refresh())
@@ -286,6 +290,9 @@ async function startClient(context: ExtensionContext) {
         deleteChangeSetCommand(client),
         viewChangeSetCommand(client, diffProvider),
         refreshCommand(stacksManager),
+        refreshHooksCommand(hooksManager, cfnExplorer),
+        loadMoreHooksCommand(),
+        configureHookCommand(client, hooksManager, cfnExplorer),
         openStackTemplateCommand(client),
         selectRegionCommand(cfnExplorer),
         selectEnvironmentCommand(cfnExplorer),

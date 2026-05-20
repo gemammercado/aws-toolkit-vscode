@@ -24,6 +24,8 @@ import { DocumentManager } from '../documents/documentManager'
 import { ChangeSetsManager } from '../stacks/changeSetsManager'
 import { CfnEnvironmentManager } from '../cfn-init/cfnEnvironmentManager'
 import { CfnEnvironmentsNode } from './nodes/cfnEnvironmentsNode'
+import { HooksManager } from '../hooks/hooksManager'
+import { HooksNode } from './nodes/hooksNode'
 import { telemetry } from '../../../shared/telemetry/telemetry'
 import { cloudFormationUiClickMetric } from '../utils'
 
@@ -41,7 +43,8 @@ export class CloudFormationExplorer implements vscode.TreeDataProvider<AWSTreeNo
         private readonly changeSetsManager: ChangeSetsManager,
         documentManager: DocumentManager,
         regionProvider: RegionProvider,
-        environmentManager: CfnEnvironmentManager
+        environmentManager: CfnEnvironmentManager,
+        private readonly hooksManager?: HooksManager
     ) {
         this._onDidChangeTreeData = new vscode.EventEmitter<AWSTreeNodeBase | undefined>()
         this.onDidChangeTreeData = this._onDidChangeTreeData.event
@@ -94,6 +97,7 @@ export class CloudFormationExplorer implements vscode.TreeDataProvider<AWSTreeNo
                 new CfnEnvironmentsNode(this.environmentManager),
                 new StacksNode(this.stacksManager, this.changeSetsManager),
                 new ResourcesNode(this.resourcesManager),
+                ...(this.hooksManager ? [new HooksNode(this.hooksManager)] : []),
             ]
         } catch (error) {
             getLogger().error('CloudFormation explorer error: %O', error)
